@@ -2,14 +2,11 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Peta Jembatan Pengasih</title>
+  <title>Peta Jembatan Kulon Progo</title>
 
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- Plugin Leaflet KML -->
-  <script src="https://cdn.jsdelivr.net/gh/gfacciol/leaflet-kml@main/leaflet-kml.js"></script>
 
   <style>
     html, body { height: 100%; margin: 0; }
@@ -21,9 +18,9 @@
 
   <script>
     // Inisialisasi peta
-    var map = L.map('map').setView([-7.826, 110.156], 13); // Sesuaikan dengan lokasi Pengasih
+    var map = L.map('map').setView([-7.826, 110.156], 12); // Lokasi awal (Pengasih)
 
-    // Basemap Layers
+    // === Basemap Layers ===
     var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
@@ -38,33 +35,39 @@
       attribution: 'Map data © OpenStreetMap contributors, SRTM | Style © OpenTopoMap'
     });
 
-    // Fungsi buat popup otomatis dari atribut KML
-    function attachPopups(layer) {
-      layer.eachLayer(function(subLayer) {
-        if (subLayer.feature && subLayer.feature.properties) {
-          var props = subLayer.feature.properties;
-          var popupContent = '<b>' + (props.name || 'Jembatan Tanpa Nama') + '</b><br>' +
-                             (props.description || '');
-          subLayer.bindPopup(popupContent);
-        }
-      });
-    }
+    // === Load file GeoJSON ===
+    fetch('jbt-kp.geojson')
+      .then(res => res.json())
+      .then(data => {
+        var geoLayer = L.geoJSON(data, {
+          onEachFeature: function (feature, layer) {
+            // Tampilkan popup otomatis dengan atribut name / deskripsi
+            var popupContent = "<b>" + (feature.properties.name || "Jembatan") + "</b><br>" +
+                               (feature.properties.description || "");
+            layer.bindPopup(popupContent);
+          },
+          pointToLayer: function(feature, latlng) {
+            return L.marker(latlng, {
+              icon: L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+                iconSize: [24, 24],
+                iconAnchor: [12, 24],
+                popupAnchor: [0, -20]
+              })
+            });
+          },
+          style: {
+            color: "#007849",
+            weight: 2
+          }
+        }).addTo(map);
 
-    // Load file KML
-    fetch('PENGASIH - JEMBATAN.kml')
-      .then(res => res.text())
-      .then(kmltext => {
-        const parser = new DOMParser();
-        const kml = parser.parseFromString(kmltext, 'text/xml');
-        const track = new L.KML(kml);
-        map.addLayer(track);
-        map.fitBounds(track.getBounds());
+        // Sesuaikan tampilan peta agar sesuai data
+        map.fitBounds(geoLayer.getBounds());
+      })
+      .catch(err => console.error("Gagal memuat GeoJSON:", err));
 
-        // Tambahkan popup otomatis
-        attachPopups(track);
-      });
-
-    // Layer Control
+    // === Layer Control ===
     var baseMaps = {
       "OpenStreetMap": osm,
       "Satelit": satelit,
